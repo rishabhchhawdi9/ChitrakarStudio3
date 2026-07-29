@@ -1,0 +1,207 @@
+{
+  "entities": {
+    "Work": {
+      "title": "Work",
+      "description": "An artwork displayed in the studio gallery",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the artwork"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the artwork"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the artwork"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of the piece"
+        },
+        "url": {
+          "type": "string",
+          "description": "Image URL or Base64 data of the artwork"
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether the artwork is featured on the homepage"
+        }
+      },
+      "required": ["id", "title", "category", "url"]
+    },
+    "AbstractArtProject": {
+      "title": "AbstractArtProject",
+      "description": "An abstract series or project",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the abstract series"
+        },
+        "series": {
+          "type": "string",
+          "description": "Name of the series"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the project"
+        },
+        "year": {
+          "type": "string",
+          "description": "Year of creation"
+        },
+        "medium": {
+          "type": "string",
+          "description": "Medium used"
+        },
+        "dimensions": {
+          "type": "string",
+          "description": "Dimensions of the canvas"
+        },
+        "description": {
+          "type": "string",
+          "description": "Conceptual narrative of the series"
+        },
+        "photos": {
+          "type": "array",
+          "description": "List of photographs showcasing the abstract canvas from multiple angles"
+        }
+      },
+      "required": ["id", "series", "title", "year", "medium", "dimensions", "description", "photos"]
+    },
+    "StudioInfo": {
+      "title": "StudioInfo",
+      "description": "General settings and info about the art studio",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the studio"
+        },
+        "artist": {
+          "type": "string",
+          "description": "Artist's full name"
+        },
+        "city": {
+          "type": "string",
+          "description": "City location"
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Display contact phone number"
+        },
+        "phoneRaw": {
+          "type": "string",
+          "description": "Raw phone number link"
+        },
+        "instagram": {
+          "type": "string",
+          "description": "Instagram link"
+        },
+        "instagramHandle": {
+          "type": "string",
+          "description": "Instagram handle"
+        },
+        "pinterest": {
+          "type": "string",
+          "description": "Pinterest profile link"
+        }
+      },
+      "required": [
+        "name",
+        "artist",
+        "city",
+        "email",
+        "phone",
+        "phoneRaw",
+        "instagram",
+        "instagramHandle"
+      ]
+    },
+    "MediaItem": {
+      "title": "MediaItem",
+      "description": "A base64 compressed image in the local asset library",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier"
+        },
+        "url": {
+          "type": "string",
+          "description": "The base64 or URL of the image"
+        },
+        "filename": {
+          "type": "string",
+          "description": "Original file name"
+        },
+        "addedAt": {
+          "type": "string",
+          "description": "ISO timestamp when added"
+        }
+      },
+      "required": ["id", "url", "filename", "addedAt"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A brand partner or corporate client",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the client"
+        },
+        "name": {
+          "type": "string",
+          "description": "Client or brand name"
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Image URL of the brand logo"
+        },
+        "projectImageUrl": {
+          "type": "string",
+          "description": "Image URL of the case-study project"
+        },
+        "order": {
+          "type": "integer",
+          "description": "Sorting/display position order"
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Whether the partner is visible live"
+        }
+      },
+      "required": ["id", "name", "logoUrl", "projectImageUrl"]
+    }
+  },
+  "firestore": {
+    "works": {
+      "schema": "Work",
+      "description": "Artwork items in the studio"
+    },
+    "abstracts": {
+      "schema": "AbstractArtProject",
+      "description": "Abstract projects collections"
+    },
+    "studio": {
+      "schema": "StudioInfo",
+      "description": "Single-document collection containing studio details and info"
+    },
+    "media": {
+      "schema": "MediaItem",
+      "description": "The local library of uploaded base64 paintings"
+    },
+    "clients": {
+      "schema": "Client",
+      "description": "Brand partners and corporate clients displayed on the home page"
+    }
+  }
+}

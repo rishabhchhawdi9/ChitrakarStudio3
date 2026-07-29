@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Works Collection
+    match /works/{workId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Abstracts Collection
+    match /abstracts/{abstractId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Studio Settings Collection
+    match /studio/{studioId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Media Collection
+    match /media/{mediaId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Clients Collection
+    match /clients/{clientId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

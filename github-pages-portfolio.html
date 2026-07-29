@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chitrakar Studio — Works & Abstract Space</title>
+  
+  <!-- Premium Google Fonts: Space Grotesk & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            background: '#0d0d0d', // Ultra-matte black canvas
+            foreground: '#f3f4f6', // Soft crisp grey
+            muted: '#8c8c8c',
+            accent: '#d4af37', // Pure gold highlight
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Core Layout CSS for custom scrollbars and subtle film grain overlay -->
+  <style>
+    body {
+      background-color: #0d0d0d;
+      color: #f3f4f6;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    /* Film Grain Subtle Overlay */
+    .film-grain {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Distraction-free Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d0d0d;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #262626;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #404040;
+    }
+
+    /* Asymmetric Masonry Layout Grid Adjustments */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-auto-rows: 240px;
+      grid-gap: 24px;
+    }
+
+    /* Asymmetric height spans based on artistic hierarchy */
+    .span-tall {
+      grid-row: span 2;
+    }
+    .span-wide {
+      grid-column: span 1;
+    }
+    @media (min-width: 768px) {
+      .span-wide {
+        grid-column: span 2;
+      }
+    }
+    .span-mega {
+      grid-row: span 2;
+    }
+    @media (min-width: 1024px) {
+      .span-mega {
+        grid-column: span 2;
+        grid-row: span 2;
+      }
+    }
+  </style>
+</head>
+<body class="h-full overflow-x-hidden antialiased selection:bg-neutral-800 selection:text-white">
+  
+  <div class="film-grain"></div>
+
+  <!-- 1. HEADER SECTION -->
+  <header class="relative border-b border-neutral-900 px-6 py-12 md:py-20 max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div class="space-y-3">
+        <p class="text-[10px] uppercase tracking-[0.4em] text-accent font-semibold font-mono">
+          Chitrakar Studio // Digital Portfolio
+        </p>
+        <h1 class="font-display font-medium text-4xl md:text-6xl tracking-tight leading-none text-white">
+          Tarun Sharma
+        </h1>
+        <p class="text-neutral-400 max-w-xl text-sm leading-relaxed font-sans">
+          A dynamic, high-fidelity gallery documenting bespoke murals, interior artwork, and tactile abstract collections. Built as a serverless, fast-loading, edge-to-edge frame where the art is the sole hero.
+        </p>
+      </div>
+      
+      <!-- Filter Controls -->
+      <div class="flex flex-wrap gap-2 text-xs font-mono font-medium">
+        <button onclick="filterGallery('all')" id="filter-all" class="filter-btn px-4 py-2 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-all">
+          ALL WORKS
+        </button>
+        <button onclick="filterGallery('Mural')" id="filter-mural" class="filter-btn px-4 py-2 bg-transparent text-neutral-400 rounded-full hover:bg-neutral-900 transition-all">
+          MURALS
+        </button>
+        <button onclick="filterGallery('Canvas')" id="filter-canvas" class="filter-btn px-4 py-2 bg-transparent text-neutral-400 rounded-full hover:bg-neutral-900 transition-all">
+          CANVAS
+        </button>
+        <button onclick="filterGallery('Abstract')" id="filter-abstract" class="filter-btn px-4 py-2 bg-transparent text-neutral-400 rounded-full hover:bg-neutral-900 transition-all">
+          ABSTRACTS
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. GALLERY CONTAINER -->
+  <main class="px-6 py-12 max-w-7xl mx-auto">
+    
+    <!-- Quota Warning Notification (Benign Status Indicator) -->
+    <div id="quota-warning" class="hidden mb-8 p-4 bg-amber-950/20 border border-amber-800/30 rounded-xl text-xs text-amber-300 font-mono flex items-center justify-between">
+      <span>💡 Firestore Quota Limit reached or database connection paused. Running in offline fallback mode with high-fidelity, hand-curated paintings.</span>
+      <button onclick="this.parentElement.remove()" class="text-amber-300/60 hover:text-amber-300">✕</button>
+    </div>
+
+    <!-- Active Loading Shimmer -->
+    <div id="gallery-loader" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="animate-pulse bg-neutral-900 aspect-[4/5] rounded-xl"></div>
+      <div class="animate-pulse bg-neutral-900 aspect-[4/3] rounded-xl"></div>
+      <div class="animate-pulse bg-neutral-900 aspect-[1/1] rounded-xl"></div>
+    </div>
+
+    <!-- Concrete Asymmetric Masonry Grid -->
+    <div id="gallery-root" class="gallery-grid hidden transition-all duration-500">
+      <!-- Injected Dynamically by JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="gallery-empty" class="hidden text-center py-20 space-y-4">
+      <p class="text-neutral-500 text-sm font-mono">No matching artworks found in this collection.</p>
+    </div>
+  </main>
+
+  <!-- 3. DISTRACTION-FREE LIGHTBOX MODAL -->
+  <div id="lightbox" class="fixed inset-0 z-[1000] hidden bg-black/95 backdrop-blur-md p-4 sm:p-8 flex flex-col items-center justify-center cursor-zoom-out select-none opacity-0 transition-all duration-300" onclick="closeLightbox()">
+    
+    <!-- Close button -->
+    <button class="absolute top-4 right-4 md:top-8 md:right-8 h-10 w-10 flex items-center justify-center rounded-full border border-neutral-800 hover:border-neutral-500 hover:bg-white/5 text-neutral-400 hover:text-white transition-all cursor-pointer z-50" onclick="closeLightbox(); event.stopPropagation();">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <!-- Content frame -->
+    <div class="relative w-full max-w-5xl max-h-[80vh] flex items-center justify-center" onclick="event.stopPropagation();">
+      <img id="lightbox-img" src="" alt="" class="max-w-full max-h-[80vh] object-contain rounded-lg border border-neutral-900 shadow-2xl scale-95 transition-transform duration-300 select-none referrer-policy='no-referrer'">
+    </div>
+
+    <!-- Minimal Overlay Captions -->
+    <div class="mt-6 text-center max-w-2xl space-y-1.5" onclick="event.stopPropagation();">
+      <p id="lightbox-title" class="font-display text-white text-lg md:text-xl font-medium tracking-tight"></p>
+      <div class="flex items-center justify-center gap-2 text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
+        <span id="lightbox-category"></span>
+        <span class="text-neutral-700">•</span>
+        <span id="lightbox-project"></span>
+      </div>
+      <p id="lightbox-desc" class="text-xs text-neutral-400 mt-2 max-w-md mx-auto leading-relaxed font-sans font-light"></p>
+    </div>
+  </div>
+
+  <!-- 4. FIREBASE MODULES & LOGIC SCRIPT -->
+  <script type="module">
+    // Modern Firebase SDK v10+ imports from dynamic script CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { initializeFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 1. DYNAMIC PLUG-AND-PLAY FIREBASE CONFIGURATION
+    // Pre-filled with your live studio project credentials
+    const firebaseConfig = {
+      projectId: "gen-lang-client-0334855466",
+      appId: "1:1064934701461:web:dd3303c12383d7e478de9c",
+      apiKey: "AIzaSyAzZ4qLwO8pwQ2OWWqehvS80sFCA5y5_oE",
+      authDomain: "gen-lang-client-0334855466.firebaseapp.com",
+      firestoreDatabaseId: "ai-studio-chitrakarstudio-565174d8-6d71-4040-b105-b31f9a0b114b",
+      storageBucket: "gen-lang-client-0334855466.firebasestorage.app",
+      messagingSenderId: "1064934701461"
+    };
+
+    // 2. HIGH-FIDELITY LOCAL FALLBACK DATASETS
+    // Hand-curated gorgeous paintings from Unsplash to ensure the app NEVER displays blank/unloaded broken links
+    const fallbackArtworks = [
+      {
+        id: "fall-1",
+        title: "Symphony of Rust & Indigo",
+        category: "Abstract",
+        projectName: "Abstract Series I",
+        description: "A deep, layered tactile study of natural oxidation and fluid currents, exploring the dialogue between coarse earth tones and serene deep blues.",
+        url: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1200&q=80",
+        spanClass: "span-tall"
+      },
+      {
+        id: "fall-2",
+        title: "Jungle Reverie",
+        category: "Mural",
+        projectName: "Tropical Murals Collection",
+        description: "Hand-painted feature wall with dense botanical foliage and deep jungle depth shadows.",
+        url: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=800&q=80",
+        spanClass: "span-wide"
+      },
+      {
+        id: "fall-3",
+        title: "Ethereal Echoes of Silent Arcs",
+        category: "Abstract",
+        projectName: "Abstract Series II",
+        description: "Muted, powdery pastel palette conveying architectural balance, sweeping arches, and geometric shadows.",
+        url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1200&q=80",
+        spanClass: "span-mega"
+      },
+      {
+        id: "fall-4",
+        title: "Sunburst Motif",
+        category: "Wall Art",
+        projectName: "Botanical & Floral Studies",
+        description: "Decorative gold-beaten motif commissioned for a custom high-end boutique café entrance.",
+        url: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=800&q=80",
+        spanClass: ""
+      },
+      {
+        id: "fall-5",
+        title: "Fractured Horizons",
+        category: "Abstract",
+        projectName: "Abstract Series III",
+        description: "Shimmering horizontal layers of 24k gold leaf layered vertically over dense, carbon graphite textures.",
+        url: "https://images.unsplash.com/photo-1579783928586-78d1af47d286?auto=format&fit=crop&w=1200&q=80",
+        spanClass: "span-tall"
+      },
+      {
+        id: "fall-6",
+        title: "Village Fresco",
+        category: "Mural",
+        projectName: "Tropical Murals Collection",
+        description: "Story-driven mural tracing warm narrative village scenes painted for a private heritage lounge.",
+        url: "https://images.unsplash.com/photo-1501183007986-d0d080b147f9?auto=format&fit=crop&w=800&q=80",
+        spanClass: ""
+      },
+      {
+        id: "fall-7",
+        title: "Terrace Diner Arches",
+        category: "Mural",
+        projectName: "Bespoke Café & Retail Interiors",
+        description: "Elegant restaurant terrace transformation featuring hand-textured paint layers and deep arches.",
+        url: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+        spanClass: "span-wide"
+      }
+    ];
+
+    let loadedArtworks = [];
+    let activeFilter = 'all';
+
+    // 3. INITIALIZE & FETCH FROM FIREBASE WITH AUTONOMOUS FALLBACK
+    async function loadPortfolio() {
+      const loader = document.getElementById('gallery-loader');
+      const root = document.getElementById('gallery-root');
+      const warning = document.getElementById('quota-warning');
+
+      try {
+        const app = initializeApp(firebaseConfig);
+        // Bind precisely to your custom Firestore Database ID
+        const db = initializeFirestore(app, {
+          databaseId: firebaseConfig.firestoreDatabaseId
+        });
+
+        // Query the 'works' collection directly from Firebase
+        const querySnapshot = await getDocs(collection(db, "works"));
+        
+        if (querySnapshot.empty) {
+          throw new Error("Empty collection, seeding fallback");
+        }
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Filter out broken / local development paths starting with /__l5e/
+          const cleanUrl = (data.url && !data.url.startsWith('/__l5e/')) 
+            ? data.url 
+            : null;
+
+          if (cleanUrl) {
+            // Assign custom asymmetric spans based on indices to create the dynamic masonry look
+            let spanClass = "";
+            const currentIdx = loadedArtworks.length;
+            if (currentIdx % 5 === 0) spanClass = "span-tall";
+            else if (currentIdx % 5 === 2) spanClass = "span-mega";
+            else if (currentIdx % 5 === 4) spanClass = "span-wide";
+
+            loadedArtworks.push({
+              id: doc.id,
+              title: data.title || "Untitled",
+              category: data.category || "General",
+              projectName: data.projectName || "Studio Work",
+              description: data.caption || data.description || "",
+              url: cleanUrl,
+              spanClass: spanClass
+            });
+          }
+        });
+
+        // Also query the 'abstracts' collection if available
+        try {
+          const abstractSnapshot = await getDocs(collection(db, "abstracts"));
+          abstractSnapshot.forEach((doc) => {
+            const data = doc.data();
+            const cleanUrl = (data.photos && data.photos[0] && data.photos[0].url && !data.photos[0].url.startsWith('/__l5e/'))
+              ? data.photos[0].url
+              : null;
+
+            if (cleanUrl) {
+              loadedArtworks.push({
+                id: `abstract-${doc.id}`,
+                title: data.title || "Untitled Abstract",
+                category: "Abstract",
+                projectName: data.series || "Abstract Collection",
+                description: data.description || "",
+                url: cleanUrl,
+                spanClass: loadedArtworks.length % 4 === 0 ? "span-tall" : ""
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("Abstracts collection fetch skipped:", e);
+        }
+
+        // If no clean remote URLs were retrieved, populate with our beautiful offline artwork assets
+        if (loadedArtworks.length === 0) {
+          loadedArtworks = [...fallbackArtworks];
+        }
+
+      } catch (error) {
+        console.error("Firebase fetch encountered exception/quota limits. Loading fallback assets safely:", error);
+        warning.classList.remove('hidden');
+        loadedArtworks = [...fallbackArtworks];
+      } finally {
+        loader.classList.add('hidden');
+        root.classList.remove('hidden');
+        renderGallery();
+      }
+    }
+
+    // 4. RENDER GALLERY WITH ASYMMETRIC DESIGN
+    function renderGallery() {
+      const root = document.getElementById('gallery-root');
+      const emptyState = document.getElementById('gallery-empty');
+      root.innerHTML = '';
+
+      const filtered = loadedArtworks.filter(art => {
+        if (activeFilter === 'all') return true;
+        return art.category.toLowerCase().trim() === activeFilter.toLowerCase().trim();
+      });
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      filtered.forEach((art, index) => {
+        const item = document.createElement('div');
+        item.className = `group relative overflow-hidden rounded-xl bg-neutral-900 border border-neutral-950/20 cursor-zoom-in transition-all duration-500 ease-out hover:-translate-y-1 ${art.spanClass}`;
+        
+        // Single unified HTML block with clean microscopic text displayed elegantly on hover
+        item.innerHTML = `
+          <img src="${art.url}" 
+               alt="${art.title}" 
+               class="w-full h-full object-cover transition-transform duration-1000 ease-out scale-100 group-hover:scale-[1.04]"
+               referrerpolicy="no-referrer"
+               loading="lazy" />
+          
+          <!-- Smooth, high-contrast matte gradient overlay -->
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5 text-left">
+            <span class="text-[9px] font-mono tracking-[0.25em] text-accent uppercase mb-1">
+              ${art.category}
+            </span>
+            <h3 class="font-display text-white text-lg font-medium leading-snug">
+              ${art.title}
+            </h3>
+            <p class="text-[10px] font-mono text-neutral-400 mt-0.5 truncate">
+              ${art.projectName}
+            </p>
+          </div>
+        `;
+
+        // Click handler to launch dynamic fullscreen interactive lightbox
+        item.addEventListener('click', () => {
+          openLightbox(art);
+        });
+
+        root.appendChild(item);
+      });
+    }
+
+    // 5. INTERACTIVE LIGHTBOX CONTROLS
+    window.openLightbox = function(art) {
+      const lightbox = document.getElementById('lightbox');
+      const img = document.getElementById('lightbox-img');
+      const title = document.getElementById('lightbox-title');
+      const category = document.getElementById('lightbox-category');
+      const project = document.getElementById('lightbox-project');
+      const desc = document.getElementById('lightbox-desc');
+
+      // Hydrate Lightbox with high-fidelity artwork specs
+      img.src = art.url;
+      img.alt = art.title;
+      title.innerText = art.title;
+      category.innerText = art.category;
+      project.innerText = art.projectName;
+      desc.innerText = art.description;
+
+      // Smooth Fade-in & Scale-up transition classes
+      lightbox.classList.remove('hidden');
+      setTimeout(() => {
+        lightbox.classList.remove('opacity-0');
+        img.classList.remove('scale-95');
+        img.classList.add('scale-100');
+      }, 50);
+    }
+
+    window.closeLightbox = function() {
+      const lightbox = document.getElementById('lightbox');
+      const img = document.getElementById('lightbox-img');
+      
+      lightbox.classList.add('opacity-0');
+      img.classList.remove('scale-100');
+      img.classList.add('scale-95');
+      
+      setTimeout(() => {
+        lightbox.classList.add('hidden');
+        img.src = ''; // Clean image source memory footprint
+      }, 300);
+    }
+
+    // Keyboard controls for distraction-free view (Escape to close)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+
+    // 6. GALLERY CATEGORY FILTER CONTROLS
+    window.filterGallery = function(category) {
+      activeFilter = category;
+      
+      // Toggle button active visual states
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.add('text-neutral-400', 'bg-transparent');
+        btn.classList.remove('text-white', 'bg-neutral-900');
+      });
+
+      const activeBtn = document.getElementById(`filter-${category.toLowerCase()}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-neutral-400', 'bg-transparent');
+        activeBtn.classList.add('text-white', 'bg-neutral-900');
+      }
+
+      renderGallery();
+    }
+
+    // Kickoff live loading cycle
+    document.addEventListener('DOMContentLoaded', loadPortfolio);
+  </script>
+</body>
+</html>

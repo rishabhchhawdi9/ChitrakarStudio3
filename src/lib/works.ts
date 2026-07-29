@@ -1,0 +1,447 @@
+export type Category = "Mural" | "Wall Art" | "Canvas" | "Interior" | "Portrait" | "Commercial";
+
+export type Work = {
+  id: string;
+  url: string;
+  title: string;
+  category: Category;
+  caption: string;
+  description?: string;
+  featured?: boolean;
+  exclusive?: boolean;
+  projectName?: string;
+  projectId: string; // Mandatory project linking identifier
+};
+
+export const works: Work[] = [
+  {
+    id: "w1",
+    url: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=800&q=80",
+    title: "Jungle Reverie",
+    category: "Mural",
+    caption: "Hand-painted feature wall for a Faridabad residence.",
+    featured: true,
+    projectName: "Tropical Murals Collection",
+    projectId: "p-tropical",
+  },
+  {
+    id: "w2",
+    url: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=800&q=80",
+    title: "Sunburst Motif",
+    category: "Wall Art",
+    caption: "Decorative motif for a boutique café.",
+    featured: true,
+    projectName: "Botanical & Floral Studies",
+    projectId: "p-botanical",
+  },
+  {
+    id: "w3",
+    url: "https://images.unsplash.com/photo-1580136579312-94651dfd596d?auto=format&fit=crop&w=800&q=80",
+    title: "Study in Ochre",
+    category: "Canvas",
+    caption: "Original canvas, mixed media.",
+    featured: true,
+    projectName: "Easel Studies & Palettes",
+    projectId: "p-easel",
+  },
+  {
+    id: "w4",
+    url: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80",
+    title: "Restaurant Wall — Kilim",
+    category: "Interior",
+    caption: "Full interior styling with hand-painted panels.",
+    featured: true,
+    projectName: "Bespoke Café & Retail Interiors",
+    projectId: "p-cafe",
+  },
+  {
+    id: "w5",
+    url: "https://images.unsplash.com/photo-1501183007986-d0d080b147f9?auto=format&fit=crop&w=800&q=80",
+    title: "Village Fresco",
+    category: "Mural",
+    caption: "Story-driven mural for a heritage café.",
+    projectName: "Tropical Murals Collection",
+    projectId: "p-tropical",
+  },
+  {
+    id: "w6",
+    url: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+    title: "Terrace Diner",
+    category: "Interior",
+    caption: "Restaurant terrace with painted arches.",
+    featured: true,
+    projectName: "Bespoke Café & Retail Interiors",
+    projectId: "p-cafe",
+  },
+  {
+    id: "w7",
+    url: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=736&q=80",
+    title: "Portrait Study I",
+    category: "Portrait",
+    caption: "Commissioned portrait, acrylic on canvas.",
+    projectName: "Human Form & Portraiture",
+    projectId: "p-portrait",
+  },
+  {
+    id: "w8",
+    url: "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=736&q=80",
+    title: "Floral Chorus",
+    category: "Wall Art",
+    caption: "Layered floral wall for a stylist's studio.",
+    projectName: "Botanical & Floral Studies",
+    projectId: "p-botanical",
+  },
+  {
+    id: "w9",
+    url: "https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&w=736&q=80",
+    title: "Still Life, Warm",
+    category: "Canvas",
+    caption: "Original canvas commissioned for a client home.",
+    projectName: "Easel Studies & Palettes",
+    projectId: "p-easel",
+  },
+  {
+    id: "w10",
+    url: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=736&q=80",
+    title: "Kids' Room Safari",
+    category: "Mural",
+    caption: "Full-wall mural for a children's bedroom.",
+    featured: true,
+    projectName: "Tropical Murals Collection",
+    projectId: "p-tropical",
+  },
+  {
+    id: "w11",
+    url: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80",
+    title: "Brand Signage Wall",
+    category: "Commercial",
+    caption: "Brand identity hand-painted for a retail space.",
+    projectName: "Bespoke Café & Retail Interiors",
+    projectId: "p-cafe",
+  },
+  {
+    id: "w12",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
+    title: "Peach & Palm",
+    category: "Wall Art",
+    caption: "Modern botanical for a wellness studio.",
+    projectName: "Botanical & Floral Studies",
+    projectId: "p-botanical",
+  },
+  {
+    id: "w13",
+    url: "https://images.unsplash.com/photo-1579783928586-78d1af47d286?auto=format&fit=crop&w=800&q=80",
+    title: "Studio Notes",
+    category: "Canvas",
+    caption: "Work in progress from the studio wall.",
+    projectName: "Easel Studies & Palettes",
+    projectId: "p-easel",
+  },
+  {
+    id: "w14",
+    url: "https://images.unsplash.com/photo-1498804103079-a6351b050096?auto=format&fit=crop&w=800&q=80",
+    title: "Café Corner",
+    category: "Interior",
+    caption: "Cozy nook painted end-to-end.",
+    projectName: "Bespoke Café & Retail Interiors",
+    projectId: "p-cafe",
+  },
+  {
+    id: "w15",
+    url: "https://images.unsplash.com/photo-1518156677180-95a2893f3e9f?auto=format&fit=crop&w=736&q=80",
+    title: "Blue Hour",
+    category: "Mural",
+    caption: "Night-scene mural on an entryway wall.",
+    projectName: "Tropical Murals Collection",
+    projectId: "p-tropical",
+  },
+  {
+    id: "w16",
+    url: "https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=800&q=80",
+    title: "Canvas No. 23",
+    category: "Canvas",
+    caption: "Abstract composition, mixed media.",
+    projectName: "Easel Studies & Palettes",
+    projectId: "p-easel",
+  },
+  {
+    id: "w17",
+    url: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&w=800&q=80",
+    title: "Colour Study",
+    category: "Canvas",
+    caption: "Palette study, acrylic on board.",
+    projectName: "Easel Studies & Palettes",
+    projectId: "p-easel",
+  },
+  {
+    id: "w18",
+    url: "https://images.unsplash.com/photo-1576016770956-debb63d90029?auto=format&fit=crop&w=800&q=80",
+    title: "Detail Work",
+    category: "Wall Art",
+    caption: "Close-up of hand-lettered detail.",
+    projectName: "Botanical & Floral Studies",
+    projectId: "p-botanical",
+  },
+  {
+    id: "w19",
+    url: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=736&q=80",
+    title: "Sketchbook Page",
+    category: "Portrait",
+    caption: "Studio sketch from the working book.",
+    projectName: "Human Form & Portraiture",
+    projectId: "p-portrait",
+  },
+  {
+    id: "w20",
+    url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=736&q=80",
+    title: "Portrait Study II",
+    category: "Portrait",
+    caption: "Portrait commission in progress.",
+    projectName: "Human Form & Portraiture",
+    projectId: "p-portrait",
+  },
+  {
+    id: "w21",
+    url: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1200&q=80",
+    title: "Symphony of Rust & Indigo",
+    category: "Canvas",
+    caption:
+      "Tactile study of natural oxidation and fluid currents, showing the tense contrast between rust textures and deep indigo flows.",
+    projectName: "Symphony of Rust & Indigo",
+    projectId: "p-abs-1",
+  },
+  {
+    id: "w22",
+    url: "https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=800&q=80",
+    title: "Heavy Gesso Fissure",
+    category: "Canvas",
+    caption:
+      "Macro detail of the central heavily-plastered fissure, showing the physical depth of the gesso on wood panel.",
+    projectName: "Symphony of Rust & Indigo",
+    projectId: "p-abs-1",
+  },
+  {
+    id: "w23",
+    url: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80",
+    title: "Studio Raking Light Study",
+    category: "Interior",
+    caption:
+      "Studio perspective under natural raking light, emphasizing the sculpted surface and physical contours.",
+    projectName: "Symphony of Rust & Indigo",
+    projectId: "p-abs-1",
+  },
+  {
+    id: "w24",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
+    title: "Minimalist Living Installation",
+    category: "Interior",
+    caption:
+      "Scale reference showcasing the finished abstract cradled wood panel installed in a modern neutral living room setting.",
+    projectName: "Symphony of Rust & Indigo",
+    projectId: "p-abs-1",
+  },
+  {
+    id: "w25",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1200&q=80",
+    title: "Ethereal Echoes of Silent Arcs",
+    category: "Wall Art",
+    caption:
+      "Elegant composition featuring overlapping archways, sweeping geometric curves, and soft, muted cream gradients.",
+    projectName: "Ethereal Echoes of Silent Arcs",
+    projectId: "p-abs-2",
+  },
+  {
+    id: "w26",
+    url: "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=800&q=80",
+    title: "Marble Dust Impasto",
+    category: "Canvas",
+    caption:
+      "Tactile close-up of the dry impasto texture where the custom marble dust plaster meets the raw Belgian linen.",
+    projectName: "Ethereal Echoes of Silent Arcs",
+    projectId: "p-abs-2",
+  },
+  {
+    id: "w27",
+    url: "https://images.unsplash.com/photo-1579783928586-78d1af47d286?auto=format&fit=crop&w=800&q=80",
+    title: "Warm Studio Horizon Light",
+    category: "Interior",
+    caption:
+      "Warm afternoon light hitting the canvas in the studio, highlighting the dry, mineral texture and organic fabric weave.",
+    projectName: "Ethereal Echoes of Silent Arcs",
+    projectId: "p-abs-2",
+  },
+  {
+    id: "w28",
+    url: "https://images.unsplash.com/photo-1501183007986-d0d080b147f9?auto=format&fit=crop&w=800&q=80",
+    title: "Gallery Monumental Installation",
+    category: "Interior",
+    caption:
+      "Gallery installation preview, displaying the monumental presence of the geometric arches against a dark wall.",
+    projectName: "Ethereal Echoes of Silent Arcs",
+    projectId: "p-abs-2",
+  },
+  {
+    id: "w29",
+    url: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1200&q=80",
+    title: "Fractured Horizon Main Panel",
+    category: "Canvas",
+    caption:
+      "Main panel view illustrating the stark vertical divides, rough charcoal washes, and reflective gold leaf veins.",
+    projectName: "Fractured Horizons",
+    projectId: "p-abs-3",
+  },
+  {
+    id: "w30",
+    url: "https://images.unsplash.com/photo-1579783928586-78d1af47d286?auto=format&fit=crop&w=800&q=80",
+    title: "Gold Leaf and Charcoal Horizon",
+    category: "Canvas",
+    caption:
+      "Detailed landscape view demonstrating the transition of delicate 24k gold leafing into heavy charcoal dust layers.",
+    projectName: "Fractured Horizons",
+    projectId: "p-abs-3",
+  },
+  {
+    id: "w31",
+    url: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=800&q=80",
+    title: "Easel Graphite Gloss Study",
+    category: "Interior",
+    caption:
+      "Angle view on the active easel showing the raw painterly edge treatment and reflective graphite gloss.",
+    projectName: "Fractured Horizons",
+    projectId: "p-abs-3",
+  },
+  {
+    id: "w32",
+    url: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=800&q=80",
+    title: "24k Gold Leaf Crinkle Detail",
+    category: "Canvas",
+    caption:
+      "Extreme close-up showing the shimmering, metallic crinkling of the 24k gold leaf layered over carbon.",
+    projectName: "Fractured Horizons",
+    projectId: "p-abs-3",
+  },
+  {
+    id: "w33",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1200&q=80",
+    title: "Primal Obsidian & Ochre Main Panel",
+    category: "Canvas",
+    caption:
+      "Complete composition showing energetic soot-black strokes slicing across a warm sienna and natural ochre background.",
+    projectName: "Primal Obsidian & Ochre",
+    projectId: "p-abs-4",
+  },
+  {
+    id: "w34",
+    url: "https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=800&q=80",
+    title: "Volcanic Sand Charcoal Sweep",
+    category: "Canvas",
+    caption:
+      "Close-up of the energetic charcoal sweep, revealing the underlying granular volcanic sand texture.",
+    projectName: "Primal Obsidian & Ochre",
+    projectId: "p-abs-4",
+  },
+  {
+    id: "w35",
+    url: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80",
+    title: "Sienna Glaze Layering",
+    category: "Canvas",
+    caption:
+      "Detail showing transparent glaze layers of raw sienna built up over dark, dense acrylic gestures.",
+    projectName: "Primal Obsidian & Ochre",
+    projectId: "p-abs-4",
+  },
+  {
+    id: "w36",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
+    title: "Gallery-Wrap Finished Edge",
+    category: "Interior",
+    caption:
+      "Framing view highlighting the raw, painted gallery-wrap edges of the museum-grade heavy canvas.",
+    projectName: "Primal Obsidian & Ochre",
+    projectId: "p-abs-4",
+  },
+  {
+    id: "w37",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1200&q=80",
+    title: "Monolithic Echoes Front View",
+    category: "Canvas",
+    caption:
+      "Main front view highlighting the imposing, tall monolith, vertical mass, and subtle texture gradient.",
+    projectName: "Monolithic Echoes",
+    projectId: "p-abs-5",
+  },
+  {
+    id: "w38",
+    url: "https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=800&q=80",
+    title: "Hand-Troweled Sculptural Relief",
+    category: "Canvas",
+    caption:
+      "Texture close-up of the hand-troweled sculptural ridges running the full height of the dark block on linen.",
+    projectName: "Monolithic Echoes",
+    projectId: "p-abs-5",
+  },
+  {
+    id: "w39",
+    url: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80",
+    title: "Side-Lit Monolith Depth",
+    category: "Interior",
+    caption:
+      "Studio photo capturing the depth of the relief shadow cast under soft side-window illumination.",
+    projectName: "Monolithic Echoes",
+    projectId: "p-abs-5",
+  },
+  {
+    id: "w40",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
+    title: "Boardroom Scale Installation",
+    category: "Commercial",
+    caption:
+      "Installed context showcasing the monolithic scale against a tall ceiling in a contemporary commercial boardroom.",
+    projectName: "Monolithic Echoes",
+    projectId: "p-abs-5",
+  },
+  {
+    id: "ex1",
+    url: "https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=800&q=80",
+    title: "Live Edge Resin River Table",
+    category: "Interior",
+    caption: "Premium custom-built walnut wood slab slab with deep-sea turquoise resin pour.",
+    exclusive: true,
+    projectName: "Bespoke Sculptural Commissions",
+    projectId: "p-commission",
+  },
+  {
+    id: "ex2",
+    url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
+    title: "Geometric Thread-Art Board",
+    category: "Wall Art",
+    caption: "Hand-spun silk thread architectural geometry over charred cedar panel.",
+    exclusive: true,
+    projectName: "Bespoke Sculptural Commissions",
+    projectId: "p-commission",
+  },
+  {
+    id: "ex3",
+    url: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=800&q=80",
+    title: "Textured Gesso & Brass Mandorla",
+    category: "Canvas",
+    caption: "Sculptural mineral relief featuring raw ochres and hand-beaten polished brass inlay.",
+    exclusive: true,
+    projectName: "Bespoke Sculptural Commissions",
+    projectId: "p-commission",
+  },
+];
+
+export const CATEGORIES: Category[] = [
+  "Mural",
+  "Wall Art",
+  "Canvas",
+  "Interior",
+  "Portrait",
+  "Commercial",
+];
+
+export const heroImage =
+  "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=1200&q=80";
+export const portraitImage =
+  "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=736&q=80";

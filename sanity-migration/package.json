@@ -1,0 +1,12 @@
+{
+  "name": "sanity-migration",
+  "version": "1.0.0",
+  "description": "Automated migration script for ChitrakarStudio Sanity CMS",
+  "main": "migrate.js",
+  "scripts": {
+    "migrate": "node migrate.js"
+  },
+  "dependencies": {
+    "@sanity/client": "^6.21.3"
+  }
+}

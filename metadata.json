@@ -1,0 +1,8 @@
+{
+  "name": "Remix: ChitrakarStudio",
+  "description": "Imported from GitHub: rishabhchhawdi9/ChitrakarStudio",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
