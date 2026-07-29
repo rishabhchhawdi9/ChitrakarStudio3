@@ -3,8 +3,7 @@ import { works as defaultWorks, type Work } from "./works";
 import { ABSTRACT_ARTS as defaultAbstracts, type AbstractArtProject } from "./abstract-data";
 import { STUDIO as defaultStudio } from "./studio";
 import { defaultClients, type Client } from "./clients";
-import { db } from "./firebase";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } from "firebase/firestore";
+import { sanityClient } from "./sanity";
 
 export interface MediaItem {
   id: string;
@@ -41,252 +40,358 @@ let studioCache = { ...defaultStudio };
 let mediaCache: MediaItem[] = [...defaultMedia];
 let clientsCache: Client[] = [...defaultClients];
 
-// Firestore Error Handling
-export enum OperationType {
-  CREATE = "create",
-  UPDATE = "update",
-  DELETE = "delete",
-  LIST = "list",
-  GET = "get",
-  WRITE = "write",
-}
-
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  };
-}
-
-function handleFirestoreError(
-  error: unknown,
-  operationType: OperationType,
-  path: string | null,
-  shouldThrow = true,
-) {
-  const errMessage = error instanceof Error ? error.message : String(error);
-
-  // Ignore or gracefully handle benign, transient, or idle stream disconnection messages
-  if (
-    errMessage.includes("Disconnecting idle stream") ||
-    errMessage.includes("Timed out waiting for new targets") ||
-    errMessage.includes("CANCELLED")
-  ) {
-    console.warn("Firestore transient/idle stream disconnect (benign):", errMessage);
-    return;
-  }
-
-  // Gracefully handle quota limits as benign warning so AI Studio platform doesn't flag them as fatal errors
-  if (
-    errMessage.includes("Quota limit exceeded") ||
-    errMessage.includes("quota exceeded") ||
-    errMessage.includes("Quota exceeded")
-  ) {
-    console.warn(
-      "Firestore quota limit exceeded. Operating in secure local-state fallback mode:",
-      errMessage,
-    );
-    return;
-  }
-
-  const errInfo: FirestoreErrorInfo = {
-    error: errMessage,
-    authInfo: {
-      userId: null,
-      email: null,
-      emailVerified: null,
-      isAnonymous: null,
-      tenantId: null,
-      providerInfo: [],
-    },
-    operationType,
-    path,
-  };
-  console.error("Firestore Error: ", JSON.stringify(errInfo));
-  if (shouldThrow) {
-    throw new Error(JSON.stringify(errInfo));
+// Helper to upload a base64 image URL to Sanity's asset store
+async function uploadBase64ToSanity(base64Str: string, filename: string): Promise<string> {
+  try {
+    const res = await fetch(base64Str);
+    const blob = await res.blob();
+    const asset = await sanityClient.assets.upload("image", blob, {
+      filename,
+      contentType: blob.type || "image/jpeg",
+    });
+    return asset._id;
+  } catch (err) {
+    console.error("Failed to upload base64 image as Sanity asset:", err);
+    return "";
   }
 }
 
-// Check and initialize Firestore if empty
+// Seeding Default Data to Sanity
+async function seedDefaults() {
+  console.log("Seeding Sanity dataset with defaults...");
+
+  // 1. Seed Studio Info
+  await sanityClient.createOrReplace({
+    _type: "studioInfo",
+    _id: "studio-info",
+    ...defaultStudio,
+  });
+
+  // 2. Seed Artworks
+  for (const w of defaultWorks) {
+    let assetRef = null;
+    try {
+      const res = await fetch(w.url);
+      if (res.ok) {
+        const blob = await res.blob();
+        const asset = await sanityClient.assets.upload("image", blob, {
+          filename: `${w.title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.jpg`,
+        });
+        assetRef = asset._id;
+      }
+    } catch (e) {
+      console.error(`Failed to seed image asset for work ${w.title}:`, e);
+    }
+
+    const doc: any = {
+      _type: "artwork",
+      _id: `artwork-${w.id}`,
+      title: w.title,
+      category: w.category,
+      caption: w.caption,
+      description: w.description || "",
+      featured: w.featured || false,
+      exclusive: w.exclusive || false,
+      projectName: w.projectName || "",
+      projectId: w.projectId,
+    };
+    if (assetRef) {
+      doc.image = { _type: "image", asset: { _type: "reference", _ref: assetRef } };
+    } else {
+      doc.url = w.url;
+    }
+    await sanityClient.createOrReplace(doc);
+  }
+
+  // 3. Seed Abstracts
+  for (const abs of defaultAbstracts) {
+    const photos = [];
+    for (let i = 0; i < abs.photos.length; i++) {
+      const photo = abs.photos[i];
+      let assetRef = null;
+      try {
+        const res = await fetch(photo.url);
+        if (res.ok) {
+          const blob = await res.blob();
+          const asset = await sanityClient.assets.upload("image", blob, {
+            filename: `abstract_${abs.title}_${i}.jpg`,
+          });
+          assetRef = asset._id;
+        }
+      } catch (e) {
+        console.error(`Failed to seed image asset for abstract photo:`, e);
+      }
+      photos.push({
+        _key: `photo-${i}`,
+        caption: photo.caption || "",
+        image: assetRef ? { _type: "image", asset: { _type: "reference", _ref: assetRef } } : undefined,
+        url: assetRef ? undefined : photo.url,
+      });
+    }
+
+    await sanityClient.createOrReplace({
+      _type: "abstractArtProject",
+      _id: `abstract-${abs.id}`,
+      series: abs.series,
+      title: abs.title,
+      year: abs.year,
+      medium: abs.medium,
+      dimensions: abs.dimensions,
+      description: abs.description,
+      photos,
+    });
+  }
+
+  // 4. Seed Clients
+  for (const c of defaultClients) {
+    let logoAssetRef = null;
+    let projectAssetRef = null;
+    try {
+      const logoRes = await fetch(c.logoUrl);
+      if (logoRes.ok) {
+        const blob = await logoRes.blob();
+        const asset = await sanityClient.assets.upload("image", blob, {
+          filename: `logo_${c.name}.jpg`,
+        });
+        logoAssetRef = asset._id;
+      }
+      const projRes = await fetch(c.projectImageUrl);
+      if (projRes.ok) {
+        const blob = await projRes.blob();
+        const asset = await sanityClient.assets.upload("image", blob, {
+          filename: `project_${c.name}.jpg`,
+        });
+        projectAssetRef = asset._id;
+      }
+    } catch (e) {
+      console.error(`Failed to seed image asset for client ${c.name}:`, e);
+    }
+
+    const doc: any = {
+      _type: "client",
+      _id: `client-${c.id}`,
+      name: c.name,
+      order: c.order,
+      published: c.published,
+    };
+    if (logoAssetRef) {
+      doc.logo = { _type: "image", asset: { _type: "reference", _ref: logoAssetRef } };
+    } else {
+      doc.logoUrl = c.logoUrl;
+    }
+    if (projectAssetRef) {
+      doc.projectImage = { _type: "image", asset: { _type: "reference", _ref: projectAssetRef } };
+    } else {
+      doc.projectImageUrl = c.projectImageUrl;
+    }
+    await sanityClient.createOrReplace(doc);
+  }
+
+  // 5. Seed Media Items
+  for (const m of defaultMedia) {
+    let assetRef = null;
+    try {
+      const res = await fetch(m.url);
+      if (res.ok) {
+        const blob = await res.blob();
+        const asset = await sanityClient.assets.upload("image", blob, {
+          filename: m.filename,
+        });
+        assetRef = asset._id;
+      }
+    } catch (e) {
+      console.error(`Failed to seed image asset for media item:`, e);
+    }
+    const doc: any = {
+      _type: "mediaItem",
+      _id: `media-${m.id}`,
+      filename: m.filename,
+      addedAt: m.addedAt,
+    };
+    if (assetRef) {
+      doc.image = { _type: "image", asset: { _type: "reference", _ref: assetRef } };
+    } else {
+      doc.url = m.url;
+    }
+    await sanityClient.createOrReplace(doc);
+  }
+}
+
+// Single GROQ query dereferencing all image assets automatically
+const ALL_DATA_QUERY = `{
+  "works": *[_type == "artwork"] | order(_createdAt desc) {
+    "id": _id,
+    title,
+    category,
+    caption,
+    description,
+    "url": coalesce(image.asset->url, url, ""),
+    projectId,
+    projectName,
+    featured,
+    exclusive
+  },
+  "abstracts": *[_type == "abstractArtProject"] | order(_createdAt desc) {
+    "id": _id,
+    series,
+    title,
+    year,
+    medium,
+    dimensions,
+    description,
+    photos[]{
+      "url": coalesce(image.asset->url, url, ""),
+      caption
+    }
+  },
+  "studio": *[_type == "studioInfo"][0] {
+    name,
+    artist,
+    city,
+    phone,
+    phoneRaw,
+    email,
+    instagram,
+    instagramHandle,
+    pinterest,
+    pinterestHandle,
+    "portraitUrl": coalesce(image.asset->url, portraitUrl, "")
+  },
+  "media": *[_type == "mediaItem"] | order(_createdAt desc) {
+    "id": _id,
+    "url": coalesce(image.asset->url, url, ""),
+    filename,
+    addedAt
+  },
+  "clients": *[_type == "client"] | order(order asc) {
+    "id": _id,
+    name,
+    "logoUrl": coalesce(logo.asset->url, logoUrl, ""),
+    "projectImageUrl": coalesce(projectImage.asset->url, projectImageUrl, ""),
+    order,
+    published
+  }
+}`;
+
 let isInitializing = false;
 
-async function initFirestoreIfNeeded() {
+async function initSanityIfNeeded() {
   if (isInitializing) return;
   isInitializing = true;
   try {
-    // We check if the studio info document exists. If it does, we assume Firestore is already initialized
-    // and we MUST NOT seed default items (even if collections are empty, which can happen if the user deletes them).
-    const studioDocRef = doc(db, "studio", "info");
-    const studioSnap = await getDocs(collection(db, "studio"));
-
-    if (studioSnap.empty) {
-      console.log(
-        "Fresh Firestore database detected. Initializing all collections with defaults...",
-      );
-
-      // 1. Studio Info
-      await setDoc(studioDocRef, defaultStudio);
-
-      // 2. Works
-      for (const w of defaultWorks) {
-        await setDoc(doc(db, "works", w.id), w);
-      }
-
-      // 3. Abstracts
-      for (const abs of defaultAbstracts) {
-        await setDoc(doc(db, "abstracts", abs.id), abs);
-      }
-
-      // 4. Media
-      for (const m of defaultMedia) {
-        await setDoc(doc(db, "media", m.id), m);
-      }
-
-      // 5. Clients
-      for (const c of defaultClients) {
-        await setDoc(doc(db, "clients", c.id), c);
-      }
-
-      console.log("Firestore initialization complete.");
+    const studioInfo = await sanityClient.fetch(`*[_type == "studioInfo"][0]`);
+    if (!studioInfo) {
+      console.log("Fresh Sanity database detected. Initializing with defaults...");
+      await seedDefaults();
+      console.log("Sanity initialization complete.");
     } else {
-      console.log("Firestore is already initialized. Skipping default seeding.");
+      console.log("Sanity is already initialized. Skipping default seeding.");
     }
   } catch (err) {
-    const errMessage = err instanceof Error ? err.message : String(err);
-    if (
-      errMessage.includes("Quota limit exceeded") ||
-      errMessage.includes("quota exceeded") ||
-      errMessage.includes("Quota exceeded")
-    ) {
-      console.warn(
-        "Firestore quota limit exceeded during database initialization. Running fully with local-state fallback.",
-      );
-    } else {
-      console.error("Failed to initialize Firestore collections:", err);
-    }
+    console.error("Failed to initialize Sanity collections:", err);
   }
 }
 
-// Subscribe to real-time updates from Firestore
+// Sync all data from Sanity into memory caches
+async function fetchAndSyncAll() {
+  try {
+    const data = await sanityClient.fetch(ALL_DATA_QUERY);
+
+    // Map artworks
+    if (data.works) {
+      worksCache = data.works.map((w: any) => ({
+        id: w.id,
+        title: w.title,
+        category: w.category,
+        caption: w.caption,
+        description: w.description || "",
+        url: w.url || "",
+        projectId: w.projectId || `p-${(w.projectName || w.category).toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+        projectName: w.projectName || "",
+        featured: w.featured || false,
+        exclusive: w.exclusive || false,
+      }));
+    }
+
+    // Map abstracts
+    if (data.abstracts) {
+      abstractsCache = data.abstracts.map((abs: any) => ({
+        id: abs.id,
+        series: abs.series,
+        title: abs.title,
+        year: abs.year,
+        medium: abs.medium,
+        dimensions: abs.dimensions,
+        description: abs.description,
+        photos: (abs.photos || []).map((p: any) => ({
+          url: p.url || "",
+          caption: p.caption || "",
+        })),
+      }));
+    }
+
+    // Map studio
+    if (data.studio) {
+      studioCache = {
+        name: data.studio.name || defaultStudio.name,
+        artist: data.studio.artist || defaultStudio.artist,
+        city: data.studio.city || defaultStudio.city,
+        phone: data.studio.phone || defaultStudio.phone,
+        phoneRaw: data.studio.phoneRaw || defaultStudio.phoneRaw,
+        email: data.studio.email || defaultStudio.email,
+        instagram: data.studio.instagram || defaultStudio.instagram,
+        instagramHandle: data.studio.instagramHandle || defaultStudio.instagramHandle,
+        pinterest: data.studio.pinterest || defaultStudio.pinterest,
+        pinterestHandle: data.studio.pinterestHandle || defaultStudio.pinterestHandle,
+        portraitUrl: data.studio.portraitUrl || defaultStudio.portraitUrl,
+      };
+    }
+
+    // Map media
+    if (data.media) {
+      mediaCache = data.media.map((m: any) => ({
+        id: m.id,
+        url: m.url || "",
+        filename: m.filename,
+        addedAt: m.addedAt,
+      }));
+    }
+
+    // Map clients
+    if (data.clients) {
+      clientsCache = data.clients.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        logoUrl: c.logoUrl || "",
+        projectImageUrl: c.projectImageUrl || "",
+        order: c.order || 0,
+        published: c.published !== false,
+      }));
+    }
+
+    notify();
+  } catch (err) {
+    console.error("Failed to fetch and sync from Sanity:", err);
+  }
+}
+
+// Subscribe to real-time updates from Sanity
 if (typeof window !== "undefined") {
-  initFirestoreIfNeeded().then(() => {
-    // Works subscription
-    onSnapshot(
-      collection(db, "works"),
-      (snapshot) => {
-        const list: Work[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data() as Work;
-          // Validation: Ensure valid fully-loaded image URLs, skip mock/local routes
-          if (data && data.url && typeof data.url === "string" && !data.url.includes("/__l5e/")) {
-            // Assign a fallback projectId based on name if somehow missing in firestore
-            const validatedWork: Work = {
-              ...data,
-              projectId:
-                data.projectId ||
-                `p-${(data.projectName || data.category).toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
-            };
-            list.push(validatedWork);
-          }
-        });
-        list.sort((a, b) => b.id.localeCompare(a.id));
-        // Fallback to defaults if empty to avoid blank interface
-        worksCache = list.length > 0 ? list : [...defaultWorks];
-        notify();
+  initSanityIfNeeded().then(() => {
+    // Listen to changes on types associated with ChitrakarStudio
+    sanityClient.listen(
+      `*[_type in ["artwork", "abstractArtProject", "client", "mediaItem", "studioInfo"]]`
+    ).subscribe({
+      next: () => {
+        fetchAndSyncAll();
       },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, "works", false);
-      },
-    );
+      error: (err) => {
+        console.error("Sanity subscription error:", err);
+      }
+    });
 
-    // Abstracts subscription
-    onSnapshot(
-      collection(db, "abstracts"),
-      (snapshot) => {
-        const list: AbstractArtProject[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data() as AbstractArtProject;
-          // Validation: Ensure valid project layout with photos
-          if (data && data.photos && Array.isArray(data.photos) && data.photos.length > 0) {
-            const cleanPhotos = data.photos.filter((p) => p && p.url && !p.url.includes("/__l5e/"));
-            if (cleanPhotos.length > 0) {
-              const validatedAbstract: AbstractArtProject = {
-                ...data,
-                projectId: data.projectId || `p-abs-${list.length + 1}`,
-                photos: cleanPhotos,
-              };
-              list.push(validatedAbstract);
-            }
-          }
-        });
-        list.sort((a, b) => b.id.localeCompare(a.id));
-        // Fallback to defaults if empty to avoid blank interface
-        abstractsCache = list.length > 0 ? list : [...defaultAbstracts];
-        notify();
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, "abstracts", false);
-      },
-    );
-
-    // Studio settings subscription
-    onSnapshot(
-      doc(db, "studio", "info"),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          studioCache = docSnap.data() as typeof defaultStudio;
-          notify();
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, "studio/info", false);
-      },
-    );
-
-    // Media library subscription
-    onSnapshot(
-      collection(db, "media"),
-      (snapshot) => {
-        const list: MediaItem[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as MediaItem);
-        });
-        list.sort((a, b) => b.id.localeCompare(a.id));
-        mediaCache = list;
-        notify();
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, "media", false);
-      },
-    );
-
-    // Clients subscription
-    onSnapshot(
-      collection(db, "clients"),
-      (snapshot) => {
-        const list: Client[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as Client);
-        });
-        list.sort((a, b) => a.order - b.order);
-        clientsCache = list;
-        notify();
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, "clients", false);
-      },
-    );
+    // Initial load
+    fetchAndSyncAll();
   });
 }
 
@@ -352,122 +457,302 @@ export function getExportData() {
 export const storeActions = {
   // Works Gallery actions
   addWork: async (work: Omit<Work, "id">) => {
-    const id = "w-" + Date.now();
-    const newWork: Work = { ...work, id };
-    try {
-      await setDoc(doc(db, "works", id), newWork);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `works/${id}`);
+    let imageAssetId = "";
+    let urlString = work.url;
+
+    if (work.url.startsWith("data:image/")) {
+      const filename = `${work.title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.jpg`;
+      imageAssetId = await uploadBase64ToSanity(work.url, filename);
+      if (imageAssetId) {
+        urlString = "";
+      }
     }
-    return newWork;
+
+    const doc: any = {
+      _type: "artwork",
+      title: work.title,
+      category: work.category,
+      caption: work.caption,
+      description: work.description || "",
+      featured: work.featured || false,
+      exclusive: work.exclusive || false,
+      projectName: work.projectName || "",
+      projectId: work.projectId,
+    };
+
+    if (imageAssetId) {
+      doc.image = {
+        _type: "image",
+        asset: { _type: "reference", _ref: imageAssetId },
+      };
+    } else {
+      doc.url = urlString;
+    }
+
+    try {
+      const created = await sanityClient.create(doc);
+      const newWork: Work = { ...work, id: created._id };
+      return newWork;
+    } catch (error) {
+      console.error("Sanity Add Work Error:", error);
+      throw error;
+    }
   },
 
   updateWork: async (id: string, updated: Partial<Work>) => {
-    const current = worksCache.find((w) => w.id === id) || {};
+    let patchData: any = { ...updated };
+    delete patchData.id;
+
+    if (updated.url && updated.url.startsWith("data:image/")) {
+      const title = updated.title || worksCache.find((w) => w.id === id)?.title || "artwork";
+      const filename = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.jpg`;
+      const imageAssetId = await uploadBase64ToSanity(updated.url, filename);
+      if (imageAssetId) {
+        patchData.image = {
+          _type: "image",
+          asset: { _type: "reference", _ref: imageAssetId },
+        };
+        patchData.url = "";
+      }
+    }
+
     try {
-      await setDoc(doc(db, "works", id), { ...current, ...updated }, { merge: true });
+      await sanityClient.patch(id).set(patchData).commit();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `works/${id}`);
+      console.error("Sanity Update Work Error:", error);
+      throw error;
     }
   },
 
   deleteWork: async (id: string) => {
     try {
-      await deleteDoc(doc(db, "works", id));
+      await sanityClient.delete(id);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `works/${id}`);
+      console.error("Sanity Delete Work Error:", error);
+      throw error;
     }
   },
 
   // Abstract Projects actions
   addAbstract: async (project: Omit<AbstractArtProject, "id">) => {
-    const id = "abs-" + Date.now();
-    const newProj: AbstractArtProject = { ...project, id };
-    try {
-      await setDoc(doc(db, "abstracts", id), newProj);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `abstracts/${id}`);
+    const uploadedPhotos = [];
+    for (let i = 0; i < project.photos.length; i++) {
+      const photo = project.photos[i];
+      let assetId = "";
+      let url = photo.url;
+      if (photo.url.startsWith("data:image/")) {
+        assetId = await uploadBase64ToSanity(photo.url, `abstract_${project.title}_${i}.jpg`);
+        if (assetId) url = "";
+      }
+      uploadedPhotos.push({
+        _key: `photo-${i}-${Date.now()}`,
+        caption: photo.caption || "",
+        image: assetId ? { _type: "image", asset: { _type: "reference", _ref: assetId } } : undefined,
+        url: assetId ? undefined : url,
+      });
     }
-    return newProj;
+
+    const doc = {
+      _type: "abstractArtProject",
+      series: project.series,
+      title: project.title,
+      year: project.year,
+      medium: project.medium,
+      dimensions: project.dimensions,
+      description: project.description,
+      photos: uploadedPhotos,
+    };
+
+    try {
+      const created = await sanityClient.create(doc);
+      const newProj: AbstractArtProject = { ...project, id: created._id };
+      return newProj;
+    } catch (error) {
+      console.error("Sanity Add Abstract Error:", error);
+      throw error;
+    }
   },
 
   updateAbstract: async (id: string, updated: Partial<AbstractArtProject>) => {
-    const current = abstractsCache.find((p) => p.id === id) || {};
+    let patchData: any = { ...updated };
+    delete patchData.id;
+
+    if (updated.photos) {
+      const uploadedPhotos = [];
+      for (let i = 0; i < updated.photos.length; i++) {
+        const photo = updated.photos[i];
+        let assetId = "";
+        let url = photo.url;
+        if (photo.url.startsWith("data:image/")) {
+          assetId = await uploadBase64ToSanity(photo.url, `abstract_update_${id}_${i}.jpg`);
+          if (assetId) url = "";
+        }
+        uploadedPhotos.push({
+          _key: `photo-${i}-${Date.now()}`,
+          caption: photo.caption || "",
+          image: assetId ? { _type: "image", asset: { _type: "reference", _ref: assetId } } : undefined,
+          url: assetId ? undefined : url,
+        });
+      }
+      patchData.photos = uploadedPhotos;
+    }
+
     try {
-      await setDoc(doc(db, "abstracts", id), { ...current, ...updated }, { merge: true });
+      await sanityClient.patch(id).set(patchData).commit();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `abstracts/${id}`);
+      console.error("Sanity Update Abstract Error:", error);
+      throw error;
     }
   },
 
   deleteAbstract: async (id: string) => {
     try {
-      await deleteDoc(doc(db, "abstracts", id));
+      await sanityClient.delete(id);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `abstracts/${id}`);
+      console.error("Sanity Delete Abstract Error:", error);
+      throw error;
     }
   },
 
   // Media Library actions
   addMedia: async (url: string, filename: string) => {
-    const id = "m-" + Date.now();
-    const newItem: MediaItem = {
-      id,
-      url,
+    let assetId = "";
+    let mediaUrl = url;
+
+    if (url.startsWith("data:image/")) {
+      assetId = await uploadBase64ToSanity(url, filename);
+      if (assetId) mediaUrl = "";
+    }
+
+    const doc: any = {
+      _type: "mediaItem",
       filename,
       addedAt: new Date().toISOString(),
     };
-    try {
-      await setDoc(doc(db, "media", id), newItem);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `media/${id}`);
+
+    if (assetId) {
+      doc.image = { _type: "image", asset: { _type: "reference", _ref: assetId } };
+    } else {
+      doc.url = mediaUrl;
     }
-    return newItem;
+
+    try {
+      const created = await sanityClient.create(doc);
+      const newItem: MediaItem = {
+        id: created._id,
+        url: url,
+        filename,
+        addedAt: doc.addedAt,
+      };
+      return newItem;
+    } catch (error) {
+      console.error("Sanity Add Media Error:", error);
+      throw error;
+    }
   },
 
   deleteMedia: async (id: string) => {
     try {
-      await deleteDoc(doc(db, "media", id));
+      await sanityClient.delete(id);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `media/${id}`);
+      console.error("Sanity Delete Media Error:", error);
+      throw error;
     }
   },
 
   // Client actions
   addClient: async (client: Omit<Client, "id">) => {
-    const id = "c-" + Date.now();
-    const newClient: Client = { ...client, id };
-    try {
-      await setDoc(doc(db, "clients", id), newClient);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `clients/${id}`);
+    let logoAssetId = "";
+    let projectAssetId = "";
+    let logoUrl = client.logoUrl;
+    let projectImageUrl = client.projectImageUrl;
+
+    if (client.logoUrl.startsWith("data:image/")) {
+      logoAssetId = await uploadBase64ToSanity(client.logoUrl, `logo_${Date.now()}.jpg`);
+      if (logoAssetId) logoUrl = "";
     }
-    return newClient;
+    if (client.projectImageUrl.startsWith("data:image/")) {
+      projectAssetId = await uploadBase64ToSanity(client.projectImageUrl, `project_${Date.now()}.jpg`);
+      if (projectAssetId) projectImageUrl = "";
+    }
+
+    const doc: any = {
+      _type: "client",
+      name: client.name,
+      order: client.order,
+      published: client.published,
+    };
+
+    if (logoAssetId) {
+      doc.logo = { _type: "image", asset: { _type: "reference", _ref: logoAssetId } };
+    } else {
+      doc.logoUrl = logoUrl;
+    }
+
+    if (projectAssetId) {
+      doc.projectImage = { _type: "image", asset: { _type: "reference", _ref: projectAssetId } };
+    } else {
+      doc.projectImageUrl = projectImageUrl;
+    }
+
+    try {
+      const created = await sanityClient.create(doc);
+      const newClient: Client = { ...client, id: created._id };
+      return newClient;
+    } catch (error) {
+      console.error("Sanity Add Client Error:", error);
+      throw error;
+    }
   },
 
   updateClient: async (id: string, updated: Partial<Client>) => {
-    const current = clientsCache.find((c) => c.id === id) || {};
+    let patchData: any = { ...updated };
+    delete patchData.id;
+
+    if (updated.logoUrl && updated.logoUrl.startsWith("data:image/")) {
+      const logoAssetId = await uploadBase64ToSanity(updated.logoUrl, `logo_${id}.jpg`);
+      if (logoAssetId) {
+        patchData.logo = { _type: "image", asset: { _type: "reference", _ref: logoAssetId } };
+        patchData.logoUrl = "";
+      }
+    }
+    if (updated.projectImageUrl && updated.projectImageUrl.startsWith("data:image/")) {
+      const projectAssetId = await uploadBase64ToSanity(updated.projectImageUrl, `project_${id}.jpg`);
+      if (projectAssetId) {
+        patchData.projectImage = { _type: "image", asset: { _type: "reference", _ref: projectAssetId } };
+        patchData.projectImageUrl = "";
+      }
+    }
+
     try {
-      await setDoc(doc(db, "clients", id), { ...current, ...updated }, { merge: true });
+      await sanityClient.patch(id).set(patchData).commit();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `clients/${id}`);
+      console.error("Sanity Update Client Error:", error);
+      throw error;
     }
   },
 
   deleteClient: async (id: string) => {
     try {
-      await deleteDoc(doc(db, "clients", id));
+      await sanityClient.delete(id);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `clients/${id}`);
+      console.error("Sanity Delete Client Error:", error);
+      throw error;
     }
   },
 
   // General settings actions
   updateStudio: async (updated: Partial<typeof defaultStudio>) => {
     try {
-      await setDoc(doc(db, "studio", "info"), updated, { merge: true });
+      await sanityClient.createIfNotExists({
+        _type: "studioInfo",
+        _id: "studio-info",
+        ...defaultStudio,
+      });
+      await sanityClient.patch("studio-info").set(updated).commit();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, "studio/info");
+      console.error("Sanity Update Studio Error:", error);
+      throw error;
     }
   },
 
@@ -480,70 +765,102 @@ export const storeActions = {
     clients?: Client[];
   }) => {
     try {
+      const transaction = sanityClient.transaction();
+
       if (data.works && Array.isArray(data.works)) {
         for (const w of data.works) {
-          await setDoc(doc(db, "works", w.id), w);
+          transaction.createOrReplace({
+            _type: "artwork",
+            _id: w.id,
+            title: w.title,
+            category: w.category,
+            caption: w.caption,
+            description: w.description || "",
+            url: w.url,
+            projectId: w.projectId,
+            projectName: w.projectName || "",
+            featured: w.featured || false,
+            exclusive: w.exclusive || false,
+          });
         }
       }
+
       if (data.abstracts && Array.isArray(data.abstracts)) {
         for (const abs of data.abstracts) {
-          await setDoc(doc(db, "abstracts", abs.id), abs);
+          transaction.createOrReplace({
+            _type: "abstractArtProject",
+            _id: abs.id,
+            series: abs.series,
+            title: abs.title,
+            year: abs.year,
+            medium: abs.medium,
+            dimensions: abs.dimensions,
+            description: abs.description,
+            photos: abs.photos.map((p, index) => ({
+              _key: `photo-${index}`,
+              url: p.url,
+              caption: p.caption || "",
+            })),
+          });
         }
       }
+
       if (data.studio && typeof data.studio === "object") {
-        await setDoc(doc(db, "studio", "info"), data.studio, { merge: true });
+        transaction.createOrReplace({
+          _type: "studioInfo",
+          _id: "studio-info",
+          ...data.studio,
+        });
       }
+
       if (data.media && Array.isArray(data.media)) {
         for (const m of data.media) {
-          await setDoc(doc(db, "media", m.id), m);
+          transaction.createOrReplace({
+            _type: "mediaItem",
+            _id: m.id,
+            url: m.url,
+            filename: m.filename,
+            addedAt: m.addedAt,
+          });
         }
       }
+
       if (data.clients && Array.isArray(data.clients)) {
         for (const c of data.clients) {
-          await setDoc(doc(db, "clients", c.id), c);
+          transaction.createOrReplace({
+            _type: "client",
+            _id: c.id,
+            name: c.name,
+            logoUrl: c.logoUrl,
+            projectImageUrl: c.projectImageUrl,
+            order: c.order,
+            published: c.published,
+          });
         }
       }
+
+      await transaction.commit();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, "importAll");
+      console.error("Sanity Import All Error:", error);
+      throw error;
     }
   },
 
   resetToDefaults: async () => {
     try {
-      // Delete existing
-      const worksSnap = await getDocs(collection(db, "works"));
-      for (const d of worksSnap.docs) {
-        await deleteDoc(doc(db, "works", d.id));
-      }
-      const abstractsSnap = await getDocs(collection(db, "abstracts"));
-      for (const d of abstractsSnap.docs) {
-        await deleteDoc(doc(db, "abstracts", d.id));
-      }
-      const mediaSnap = await getDocs(collection(db, "media"));
-      for (const d of mediaSnap.docs) {
-        await deleteDoc(doc(db, "media", d.id));
-      }
-      const clientsSnap = await getDocs(collection(db, "clients"));
-      for (const d of clientsSnap.docs) {
-        await deleteDoc(doc(db, "clients", d.id));
-      }
+      const docs = await sanityClient.fetch(
+        `*[_type in ["artwork", "abstractArtProject", "client", "mediaItem", "studioInfo"]]`
+      );
+      const transaction = sanityClient.transaction();
+      docs.forEach((doc: any) => {
+        transaction.delete(doc._id);
+      });
+      await transaction.commit();
 
-      // Restore defaults
-      await setDoc(doc(db, "studio", "info"), defaultStudio);
-      for (const w of defaultWorks) {
-        await setDoc(doc(db, "works", w.id), w);
-      }
-      for (const abs of defaultAbstracts) {
-        await setDoc(doc(db, "abstracts", abs.id), abs);
-      }
-      for (const m of defaultMedia) {
-        await setDoc(doc(db, "media", m.id), m);
-      }
-      for (const c of defaultClients) {
-        await setDoc(doc(db, "clients", c.id), c);
-      }
+      await seedDefaults();
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, "resetToDefaults");
+      console.error("Sanity Reset Defaults Error:", error);
+      throw error;
     }
   },
 };
