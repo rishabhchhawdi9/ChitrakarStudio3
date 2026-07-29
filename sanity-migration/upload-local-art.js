@@ -313,9 +313,28 @@ function analyzeAndClassify(filename) {
     }
   }
 
-  // Ensure unique project names for matching galleries
-  const projectId = `p-${category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  const projectName = `${category} Portfolio Collection`;
+  // Group files that share the same base filename prefix (before the trailing copy/number suffixes)
+  let baseName = filename.toLowerCase().replace(/\.[^/.]+$/, ""); // strip extension
+  baseName = baseName.replace(/_\d+$/g, ""); // strip trailing _1, _2
+  baseName = baseName.replace(/-\d+$/g, ""); // strip trailing -1, -2
+  baseName = baseName.replace(/_copy$/g, ""); // strip trailing _copy
+  baseName = baseName.replace(/\s\d+$/g, ""); // strip trailing space + digit
+
+  // If the file represents a multi-angle photo, assign a specific projectId.
+  // Otherwise, default to generic category project to avoid over-segmentation.
+  const isMultiAngle = 
+    filename.toLowerCase().includes("_") || 
+    filename.toLowerCase().includes("-") || 
+    filename.toLowerCase().includes("copy") ||
+    /\s\d+/.test(filename);
+    
+  const projectId = isMultiAngle
+    ? `project-${baseName.replace(/[^a-z0-9]+/g, "-")}`.substring(0, 100)
+    : `p-${category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    
+  const projectName = isMultiAngle
+    ? `${capitalize(cleanString(baseName))} Collection`
+    : `${category} Portfolio Collection`;
 
   return { title, category, caption, description, projectId, projectName };
 }

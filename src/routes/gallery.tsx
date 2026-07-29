@@ -51,17 +51,39 @@ function GalleryPage() {
   const [isZoomed, setIsZoomed] = useState(false);
 
   const filteredWorks = useMemo(() => {
-    // Hide exclusive pieces from the main gallery unless explicitly sorted or they fit
-    // Wait, let's show all published works, sorting by ID
+    // Hide exclusive pieces from the main gallery
     const baseWorks = works.filter((w) => !w.exclusive);
-    return filter === "All" ? baseWorks : baseWorks.filter((w) => w.category === filter);
+    
+    // Group specific projects: only keep the first artwork for each specific project ID
+    const seenProjects = new Set<string>();
+    const groupedWorks = baseWorks.filter((w) => {
+      // If it has no specific project ID, or is generic, always show it
+      if (!w.projectId || ["p-canvas", "p-mural", "p-wall-art", "p-portrait", "p-commercial", "p-signage", "p-interior"].includes(w.projectId)) {
+        return true;
+      }
+      // If it's a specific project ID, only show the first one we encounter
+      if (seenProjects.has(w.projectId)) {
+        return false;
+      }
+      seenProjects.add(w.projectId);
+      return true;
+    });
+
+    return filter === "All" ? groupedWorks : groupedWorks.filter((w) => w.category === filter);
   }, [filter, works]);
 
   // Related works for the active work inside the lightbox (from same project ID, or category fallback)
   const relatedWorks = useMemo(() => {
     if (!active) return [];
-    const fromProject = getRelatedWorksByProjectId(active.projectId, active.id);
-    if (fromProject.length > 0) return fromProject.slice(0, 6);
+    
+    const isGenericProject = !active.projectId || ["p-canvas", "p-mural", "p-wall-art", "p-portrait", "p-commercial", "p-signage", "p-interior"].includes(active.projectId);
+    
+    if (!isGenericProject) {
+      const fromProject = getRelatedWorksByProjectId(active.projectId, active.id);
+      if (fromProject.length > 0) return fromProject.slice(0, 6);
+    }
+    
+    // Fallback: show other works from the same category
     return works.filter((w) => w.category === active.category && w.id !== active.id).slice(0, 6);
   }, [active, works]);
 
