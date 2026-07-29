@@ -40,6 +40,18 @@ let studioCache = { ...defaultStudio };
 let mediaCache: MediaItem[] = [...defaultMedia];
 let clientsCache: Client[] = [...defaultClients];
 
+// Helper to extract a Sanity asset ID from a Sanity CDN URL
+function getSanityAssetIdFromUrl(url: string): string | null {
+  if (!url || !url.includes("cdn.sanity.io/images/")) return null;
+  const parts = url.split("/");
+  const fileWithExt = parts[parts.length - 1]; // e.g. "hash-dimensions.ext"
+  const dotIndex = fileWithExt.lastIndexOf(".");
+  if (dotIndex === -1) return null;
+  const name = fileWithExt.substring(0, dotIndex);
+  const ext = fileWithExt.substring(dotIndex + 1);
+  return `image-${name}-${ext}`;
+}
+
 // Helper to upload a base64 image URL to Sanity's asset store
 async function uploadBase64ToSanity(base64Str: string, filename: string): Promise<string> {
   try {
@@ -480,10 +492,16 @@ export const storeActions = {
       projectId: work.projectId,
     };
 
+    const assetIdFromUrl = getSanityAssetIdFromUrl(urlString);
     if (imageAssetId) {
       doc.image = {
         _type: "image",
         asset: { _type: "reference", _ref: imageAssetId },
+      };
+    } else if (assetIdFromUrl) {
+      doc.image = {
+        _type: "image",
+        asset: { _type: "reference", _ref: assetIdFromUrl },
       };
     } else {
       doc.url = urlString;
@@ -503,16 +521,27 @@ export const storeActions = {
     let patchData: any = { ...updated };
     delete patchData.id;
 
-    if (updated.url && updated.url.startsWith("data:image/")) {
-      const title = updated.title || worksCache.find((w) => w.id === id)?.title || "artwork";
-      const filename = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.jpg`;
-      const imageAssetId = await uploadBase64ToSanity(updated.url, filename);
-      if (imageAssetId) {
-        patchData.image = {
-          _type: "image",
-          asset: { _type: "reference", _ref: imageAssetId },
-        };
-        patchData.url = "";
+    if (updated.url) {
+      if (updated.url.startsWith("data:image/")) {
+        const title = updated.title || worksCache.find((w) => w.id === id)?.title || "artwork";
+        const filename = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.jpg`;
+        const imageAssetId = await uploadBase64ToSanity(updated.url, filename);
+        if (imageAssetId) {
+          patchData.image = {
+            _type: "image",
+            asset: { _type: "reference", _ref: imageAssetId },
+          };
+          patchData.url = "";
+        }
+      } else {
+        const assetIdFromUrl = getSanityAssetIdFromUrl(updated.url);
+        if (assetIdFromUrl) {
+          patchData.image = {
+            _type: "image",
+            asset: { _type: "reference", _ref: assetIdFromUrl },
+          };
+          patchData.url = "";
+        }
       }
     }
 
@@ -543,6 +572,12 @@ export const storeActions = {
       if (photo.url.startsWith("data:image/")) {
         assetId = await uploadBase64ToSanity(photo.url, `abstract_${project.title}_${i}.jpg`);
         if (assetId) url = "";
+      } else {
+        const assetIdFromUrl = getSanityAssetIdFromUrl(photo.url);
+        if (assetIdFromUrl) {
+          assetId = assetIdFromUrl;
+          url = "";
+        }
       }
       uploadedPhotos.push({
         _key: `photo-${i}-${Date.now()}`,
@@ -586,6 +621,12 @@ export const storeActions = {
         if (photo.url.startsWith("data:image/")) {
           assetId = await uploadBase64ToSanity(photo.url, `abstract_update_${id}_${i}.jpg`);
           if (assetId) url = "";
+        } else {
+          const assetIdFromUrl = getSanityAssetIdFromUrl(photo.url);
+          if (assetIdFromUrl) {
+            assetId = assetIdFromUrl;
+            url = "";
+          }
         }
         uploadedPhotos.push({
           _key: `photo-${i}-${Date.now()}`,
@@ -660,7 +701,6 @@ export const storeActions = {
     }
   },
 
-  // Client actions
   addClient: async (client: Omit<Client, "id">) => {
     let logoAssetId = "";
     let projectAssetId = "";
@@ -670,10 +710,22 @@ export const storeActions = {
     if (client.logoUrl.startsWith("data:image/")) {
       logoAssetId = await uploadBase64ToSanity(client.logoUrl, `logo_${Date.now()}.jpg`);
       if (logoAssetId) logoUrl = "";
+    } else {
+      const assetIdFromUrl = getSanityAssetIdFromUrl(client.logoUrl);
+      if (assetIdFromUrl) {
+        logoAssetId = assetIdFromUrl;
+        logoUrl = "";
+      }
     }
     if (client.projectImageUrl.startsWith("data:image/")) {
       projectAssetId = await uploadBase64ToSanity(client.projectImageUrl, `project_${Date.now()}.jpg`);
       if (projectAssetId) projectImageUrl = "";
+    } else {
+      const assetIdFromUrl = getSanityAssetIdFromUrl(client.projectImageUrl);
+      if (assetIdFromUrl) {
+        projectAssetId = assetIdFromUrl;
+        projectImageUrl = "";
+      }
     }
 
     const doc: any = {
@@ -709,18 +761,34 @@ export const storeActions = {
     let patchData: any = { ...updated };
     delete patchData.id;
 
-    if (updated.logoUrl && updated.logoUrl.startsWith("data:image/")) {
-      const logoAssetId = await uploadBase64ToSanity(updated.logoUrl, `logo_${id}.jpg`);
-      if (logoAssetId) {
-        patchData.logo = { _type: "image", asset: { _type: "reference", _ref: logoAssetId } };
-        patchData.logoUrl = "";
+    if (updated.logoUrl) {
+      if (updated.logoUrl.startsWith("data:image/")) {
+        const logoAssetId = await uploadBase64ToSanity(updated.logoUrl, `logo_${id}.jpg`);
+        if (logoAssetId) {
+          patchData.logo = { _type: "image", asset: { _type: "reference", _ref: logoAssetId } };
+          patchData.logoUrl = "";
+        }
+      } else {
+        const assetIdFromUrl = getSanityAssetIdFromUrl(updated.logoUrl);
+        if (assetIdFromUrl) {
+          patchData.logo = { _type: "image", asset: { _type: "reference", _ref: assetIdFromUrl } };
+          patchData.logoUrl = "";
+        }
       }
     }
-    if (updated.projectImageUrl && updated.projectImageUrl.startsWith("data:image/")) {
-      const projectAssetId = await uploadBase64ToSanity(updated.projectImageUrl, `project_${id}.jpg`);
-      if (projectAssetId) {
-        patchData.projectImage = { _type: "image", asset: { _type: "reference", _ref: projectAssetId } };
-        patchData.projectImageUrl = "";
+    if (updated.projectImageUrl) {
+      if (updated.projectImageUrl.startsWith("data:image/")) {
+        const projectAssetId = await uploadBase64ToSanity(updated.projectImageUrl, `project_${id}.jpg`);
+        if (projectAssetId) {
+          patchData.projectImage = { _type: "image", asset: { _type: "reference", _ref: projectAssetId } };
+          patchData.projectImageUrl = "";
+        }
+      } else {
+        const assetIdFromUrl = getSanityAssetIdFromUrl(updated.projectImageUrl);
+        if (assetIdFromUrl) {
+          patchData.projectImage = { _type: "image", asset: { _type: "reference", _ref: assetIdFromUrl } };
+          patchData.projectImageUrl = "";
+        }
       }
     }
 
@@ -743,13 +811,38 @@ export const storeActions = {
 
   // General settings actions
   updateStudio: async (updated: Partial<typeof defaultStudio>) => {
+    let patchData: any = { ...updated };
+    delete patchData.portraitUrl;
+
+    if (updated.portraitUrl) {
+      if (updated.portraitUrl.startsWith("data:image/")) {
+        const imageAssetId = await uploadBase64ToSanity(updated.portraitUrl, `portrait_${Date.now()}.jpg`);
+        if (imageAssetId) {
+          patchData.image = {
+            _type: "image",
+            asset: { _type: "reference", _ref: imageAssetId },
+          };
+          patchData.portraitUrl = "";
+        }
+      } else {
+        const assetIdFromUrl = getSanityAssetIdFromUrl(updated.portraitUrl);
+        if (assetIdFromUrl) {
+          patchData.image = {
+            _type: "image",
+            asset: { _type: "reference", _ref: assetIdFromUrl },
+          };
+          patchData.portraitUrl = "";
+        }
+      }
+    }
+
     try {
       await sanityClient.createIfNotExists({
         _type: "studioInfo",
         _id: "studio-info",
         ...defaultStudio,
       });
-      await sanityClient.patch("studio-info").set(updated).commit();
+      await sanityClient.patch("studio-info").set(patchData).commit();
     } catch (error) {
       console.error("Sanity Update Studio Error:", error);
       throw error;

@@ -315,7 +315,7 @@ function AdminPage() {
       }
       showToast("Access granted. Welcome to your Studio Space.");
     } else {
-      setAuthError("Invalid passcode. Please enter 'admin'.");
+      setAuthError("Invalid passcode. Please enter 'Chitrakar2026!'.");
     }
   };
 
@@ -796,7 +796,7 @@ function AdminPage() {
 
           <p className="text-[11px] text-primary/50 mt-6 bg-primary/5 p-3 rounded-lg border border-primary/10">
             Developer Notice: The default system access passcode is{" "}
-            <strong className="text-primary font-bold">admin</strong>
+            <strong className="text-primary font-bold">Chitrakar2026!</strong>
           </p>
         </motion.div>
       </div>

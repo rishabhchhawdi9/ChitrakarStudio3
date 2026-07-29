@@ -43,6 +43,130 @@ const client = createClient({
   apiVersion: "2023-05-03",
 });
 
+// Curated list of high-end artistic titles and descriptions for hashed files
+const CURATED_ARTWORKS = [
+  {
+    title: "Symphony of Rust & Indigo",
+    category: "Canvas",
+    caption: "Textured mixed-media canvas painting",
+    description: "An evocative abstract study exploring the passage of time through rich, layered gesso textures, mineral iron oxide pigments, and deep indigo washes."
+  },
+  {
+    title: "Ethereal Echoes in Gesso",
+    category: "Canvas",
+    caption: "Sculptural plaster canvas relief",
+    description: "A minimal, highly tactile white-on-white composition focusing on shadows and light using hand-sculpted marble plaster and delicate charcoal sweeps."
+  },
+  {
+    title: "Golden Hour Solitude",
+    category: "Canvas",
+    caption: "Textured acrylic painting with gold-leaf accents",
+    description: "Capturing the serene warmth of the setting sun, this piece features high-texture horizons overlaid with hand-placed premium gold foil."
+  },
+  {
+    title: "Whispering Tropics Sanctuary",
+    category: "Mural",
+    caption: "Bespoke hand-painted tropical wall mural",
+    description: "A lush, immersive accent mural painted on-site, celebrating raw botanical curves, oversized palm leaves, and warm earthy tones."
+  },
+  {
+    title: "Celestial Moon Serenade",
+    category: "Mural",
+    caption: "Luminous lunar wall mural",
+    description: "A gorgeous celestial installation mapping the details and craters of the moon. Casts a serene, peaceful ambiance over the room."
+  },
+  {
+    title: "Symmetric Mandala Sanctum",
+    category: "Mural",
+    caption: "Precision geometric mandala mural",
+    description: "Hand-painted traditional mandala design featuring fine-line radial symmetry, gold-leaf accents, and a rich charcoal background."
+  },
+  {
+    title: "Linear Thread Tensions",
+    category: "Wall Art",
+    caption: "Silk thread tension installation on wood planks",
+    description: "A modern relief wall art piece utilizing high-tensile colored threads wrapped around steel pins on charred cedar wood, exploring geometric intersections."
+  },
+  {
+    title: "Polished Brass Mandorla",
+    category: "Wall Art",
+    caption: "Wood and metallic relief wall panel",
+    description: "A rustic modern design incorporating reclaimed teak planks, textured black gesso base, and a polished hand-beaten brass center."
+  },
+  {
+    title: "Blooming Grace Portrait",
+    category: "Portrait",
+    caption: "Mixed-media portrait with organic foliage",
+    description: "A beautiful fusion of high-contrast charcoal portraiture with loose, vibrant floral brushstrokes representing thoughts in full bloom."
+  },
+  {
+    title: "Verdant Canopy Reverie",
+    category: "Mural",
+    caption: "Hand-painted jungle leaf wall mural",
+    description: "An elegant botanical mural combining forest green hues and copper detailing, designed to transform any residential feature wall."
+  },
+  {
+    title: "Monolithic Echoes Study",
+    category: "Canvas",
+    caption: "Minimalist relief painting on canvas",
+    description: "Part of the materiality series, this abstract easel study features bold geometric blocks sculpted from texture paste and finished in matte ochre."
+  },
+  {
+    title: "Funky Bistro Fusion",
+    category: "Commercial",
+    caption: "Vibrant branded interior wall mural",
+    description: "A custom, high-energy graffiti-style mural designed to elevate the commercial dining experience with bold typography and cafe themes."
+  },
+  {
+    title: "Soot & Linen Contrast",
+    category: "Canvas",
+    caption: "Abstract charcoal and raw linen study",
+    description: "Exploring absolute minimalism, this piece displays deep charcoal washes and stark white lines painted directly onto raw unprimed linen."
+  },
+  {
+    title: "Gilded Arches Relief",
+    category: "Wall Art",
+    caption: "Sculptured plaster wall panel",
+    description: "A geometric wall panel exploring Roman architectural arches, sculpted in relief plaster and highlighted with 24k gold leaf details."
+  },
+  {
+    title: "Savage Jungle Wilds",
+    category: "Mural",
+    caption: "Immersive exotic wildlife mural",
+    description: "An expansive wall mural illustrating wild tropical flora and hidden wildlife motifs in dark, rich jungle-palette tones."
+  },
+  {
+    title: "Crimson Horizon Relief",
+    category: "Canvas",
+    caption: "Tactile red and gold abstract canvas",
+    description: "A bold, fiery abstract painting using heavy modeling paste to create horizontal ridge lines, washed in rich crimson and bronze leaf."
+  },
+  {
+    title: "Tethered Topographical Panel",
+    category: "Wall Art",
+    caption: "Wood carving and wire relief",
+    description: "A unique relief panel depicting topographical mapping curves, hand-carved in solid pine and detailed with polished steel wire."
+  },
+  {
+    title: "Rustic Palermo Pizzeria",
+    category: "Commercial",
+    caption: "Italian restaurant theme wall fresco",
+    description: "Authentic hand-painted Italian vista combined with rustic brick accents, painted on-site to create a cozy dining atmosphere."
+  },
+  {
+    title: "Ochre & Ash Study No. 12",
+    category: "Canvas",
+    caption: "Earth mineral pigments on heavy canvas",
+    description: "An abstract exploration of natural pigments: burnt sienna, yellow ochre, and wood ash, layered to simulate natural sedimentary formations."
+  },
+  {
+    title: "Midnight Flora Study",
+    category: "Canvas",
+    caption: "Floral fine art painting in dark tones",
+    description: "A dramatic floral study featuring deep velvet purples, navy blues, and high-gloss translucent varnish drops reflecting morning dew."
+  }
+];
+
 // Helper: Capitalize Words
 function capitalize(str) {
   return str
@@ -70,6 +194,35 @@ function cleanString(str) {
 // Catchy naming and description generation based on keywords
 function analyzeAndClassify(filename) {
   const nameLower = filename.toLowerCase();
+  const nameWithoutExt = path.parse(filename).name.toLowerCase();
+  
+  // Deterministic hash based on filename characters
+  let charHash = 0;
+  for (let c = 0; c < filename.length; c++) {
+    charHash += filename.charCodeAt(c);
+  }
+
+  // Detect if name is a random hash or numeric identifier
+  const isRandom = 
+    /^[a-f0-9]{32}$/i.test(nameWithoutExt) ||
+    /^[0-9\s_-]+$/.test(cleanString(filename)) ||
+    (cleanString(filename).split(" ").length === 1 && cleanString(filename).length > 12 && /[0-9]/.test(cleanString(filename))) ||
+    (!cleanString(filename).match(/[aeiou]/gi) && cleanString(filename).length > 4);
+
+  if (isRandom) {
+    const curated = CURATED_ARTWORKS[charHash % CURATED_ARTWORKS.length];
+    const projectId = `p-${curated.category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const projectName = `${curated.category} Portfolio Collection`;
+    return {
+      title: `${curated.title} – Study #${(charHash % 90) + 10}`,
+      category: curated.category,
+      caption: curated.caption,
+      description: curated.description,
+      projectId,
+      projectName,
+    };
+  }
+
   let title = "";
   let category = "Wall Art";
   let caption = "";
